@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Company Data Table</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.datatables.net/1.10.22/css/jquery.dataTables.min.css" />
+    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+    <script src="https://cdn.datatables.net/1.10.22/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        line-height: 1.6;
+      }
+      .container {
+        max-width: 100%;
+        overflow-x: auto;
+      }
+      #error-message {
+        color: red;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Company Data Table</h1>
+    <div id="error-message"></div>
+    <div class="container">
+      <table id="dataTable" class="display" style="width: 100%"></table>
+    </div>
+    <script>
+      $(document).ready(function () {
+        console.log("Document ready, starting to fetch data...");
+        fetch("merged_data.xlsx")
+          .then((response) => {
+            console.log("Fetch response received:", response);
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.arrayBuffer();
+          })
+          .then((data) => {
+            console.log("Data received, starting to parse...");
+            var workbook = XLSX.read(data, { type: "array" });
+            console.log("Workbook parsed:", workbook);
+            var firstSheetName = workbook.SheetNames[0];
+            var worksheet = workbook.Sheets[firstSheetName];
+            var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            console.log("JSON data created:", jsonData);
+
+            if (jsonData.length === 0) {
+              throw new Error("No data found in the Excel file");
+            }
+
+            var columns = jsonData[0].map((header) => ({ title: header }));
+
+            $("#dataTable").DataTable({
+              data: jsonData.slice(1), // Exclude the header row
+              columns: columns,
+              pageLength: 25,
+              scrollX: true,
+            });
+            console.log("DataTable initialized");
+          })
+          .catch((error) => {
+            console.error("An error occurred:", error);
+            $("#error-message").html(
+              "Error loading data: " +
+                error.message +
+                "<br>Please check the console for more details."
+            );
+            console.error("Stack trace:", error.stack);
+            console.log("Current working directory:", window.location.href);
+          });
+      });
+    </script>
+  </body>
+</html>
